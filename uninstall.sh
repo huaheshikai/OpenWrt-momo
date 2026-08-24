@@ -2,12 +2,8 @@
 
 # uninstall
 if [ -x "/bin/opkg" ]; then
-	opkg list-installed luci-i18n-momo-* | cut -d ' ' -f 1 | xargs opkg remove
-	opkg remove luci-app-momo
 	opkg remove momo
 elif [ -x "/usr/bin/apk" ]; then
-	apk list --installed --manifest luci-i18n-momo-* | cut -d ' ' -f 1 | xargs apk del
-	apk del luci-app-momo
 	apk del momo
 fi
 # remove config

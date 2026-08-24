@@ -33,15 +33,10 @@ wget -O - https://github.com/nikkinikki-org/OpenWrt-momo/raw/refs/heads/main/fee
 2. Install
 
 ```shell
-# you can install from shell or `Software` menu in LuCI
 # for opkg
 opkg install momo
-opkg install luci-app-momo
-opkg install luci-i18n-momo-zh-cn
 # for apk
 apk add momo
-apk add luci-app-momo
-apk add luci-i18n-momo-zh-cn
 ```
 
 ### B. Install From Release
@@ -79,7 +74,7 @@ echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> "
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 # make package
-make package/luci-app-momo/compile
+make package/momo/compile
 ```
 
 The package files will be found under `bin/packages/your_architecture/momo`.

@@ -33,15 +33,10 @@ wget -O - https://github.com/nikkinikki-org/OpenWrt-momo/raw/refs/heads/main/fee
 2. 安装
 
 ```shell
-# 你可以从 shell 执行命令安装或者从 LuCI 的`软件包`菜单安装
 # for opkg
 opkg install momo
-opkg install luci-app-momo
-opkg install luci-i18n-momo-zh-cn
 # for apk
 apk add momo
-apk add luci-app-momo
-apk add luci-i18n-momo-zh-cn
 ```
 
 ### B. 从发行版安装
@@ -79,7 +74,7 @@ echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> "
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 # 编译
-make package/luci-app-momo/compile
+make package/momo/compile
 ```
 
 编译结果可以在`bin/packages/your_architecture/momo`内找到。

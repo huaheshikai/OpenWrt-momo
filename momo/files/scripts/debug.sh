@@ -30,10 +30,8 @@ uname -a
 `
 if [ -x "/bin/opkg" ]; then
 	opkg list-installed "momo"
-	opkg list-installed "luci-app-momo"
 elif [ -x "/usr/bin/apk" ]; then
 	apk list -I "momo"
-	apk list -I "luci-app-momo"
 fi
 `
 \`\`\`
