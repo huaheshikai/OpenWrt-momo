@@ -55,7 +55,7 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
           FEEDNAME: momo
-          PACKAGES: luci-app-momo
+          PACKAGES: momo
           NO_REFRESH_CHECK: true
 
       - name: upload
