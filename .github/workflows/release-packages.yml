@@ -67,9 +67,6 @@ jobs:
         run: |
           mkdir -p package/momo
           cp -a ../momo/. package/momo/
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-          make defconfig
           make package/momo/compile -j"$(nproc)" V=s
 
       - name: Package build output
