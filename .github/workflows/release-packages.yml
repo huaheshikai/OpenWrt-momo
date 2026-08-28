@@ -1,116 +1,88 @@
-name: release-packages
+name: Release momo package
 
 on:
-  workflow_dispatch:
   push:
     tags:
-      - v*
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  SDK_URL: https://downloads.immortalwrt.org/releases/25.12.0/targets/x86/64/immortalwrt-sdk-25.12.0-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
 
 jobs:
   release:
-    name: ${{ matrix.arch }}-${{ matrix.branch }} release
+    name: Build and release x86_64 package
     runs-on: ubuntu-latest
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - arm_cortex-a5_vfpv4
-          - arm_cortex-a7_neon-vfpv4
-          - arm_cortex-a8_vfpv3
-          - arm_cortex-a9
-          - arm_cortex-a9_vfpv3-d16
-          - arm_cortex-a9_neon
-          - arm_cortex-a15_neon-vfpv4
-          - aarch64_cortex-a53
-          - aarch64_cortex-a72
-          - aarch64_cortex-a76
-          - aarch64_generic
-          - mips_24kc
-          - mips_mips32
-          - mipsel_24kc
-          - mipsel_24kc_24kf
-          - mipsel_74kc
-          - mipsel_mips32
-          - mips64_octeonplus
-          - riscv64_riscv64
-          - riscv64_generic
-          - loongarch64_generic
-          - i386_pentium4
-          - x86_64
-        branch:
-          - openwrt-24.10
-          - openwrt-25.12
-          - SNAPSHOT
-        exclude:
-          - arch: riscv64_riscv64
-            branch: openwrt-25.12
-          - arch: riscv64_riscv64
-            branch: SNAPSHOT
-          - arch: riscv64_generic
-            branch: openwrt-24.10
 
     steps:
-      - name: checkout
+      - name: Check out source
         uses: actions/checkout@v6
 
-      - name: build
-        uses: openwrt/gh-action-sdk@main
+      - name: Set package version from tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
-          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
-          FEEDNAME: momo
-          PACKAGES: momo
-          INDEX: 1
-          KEY_BUILD: ${{ secrets.KEY_BUILD }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          NO_REFRESH_CHECK: true
-
-      - name: compress
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          tar -c -z -f momo_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz -C bin/packages/${{ matrix.arch }}/momo .
-          mkdir -p public/${{ matrix.branch }}/${{ matrix.arch }}
-          mv bin/packages/${{ matrix.arch }}/momo public/${{ matrix.branch }}/${{ matrix.arch }}
-          tar -c -z -f feed_momo_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz public/${{ matrix.branch }}/${{ matrix.arch }}
+          version="${TAG_NAME#v}"
+          sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$version/" momo/Makefile
+          grep '^PKG_VERSION:=' momo/Makefile
 
-      - if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
-        name: release
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Cache ImmortalWrt SDK
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: sdk.tar.zst
+          key: immortalwrt-sdk-25.12.0-x86-64-gcc-14.3.0-musl
+
+      - name: Download ImmortalWrt SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y aria2
+          aria2c \
+            --continue=true \
+            --max-connection-per-server=16 \
+            --split=16 \
+            --min-split-size=1M \
+            --retry-wait=5 \
+            --max-tries=3 \
+            --file-allocation=none \
+            --out=sdk.tar.zst \
+            "$SDK_URL" || \
+          curl --fail --location --retry 3 --retry-all-errors --output sdk.tar.zst "$SDK_URL"
+
+      - name: Download and extract ImmortalWrt SDK
+        run: |
+          tar --use-compress-program=unzstd -xf sdk.tar.zst
+          mv immortalwrt-sdk-* sdk
+
+      - name: Build momo
+        working-directory: sdk
+        run: |
+          mkdir -p package/momo
+          cp -a ../momo/. package/momo/
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          make defconfig
+          make package/momo/compile -j"$(nproc)" V=s
+
+      - name: Package build output
+        run: |
+          mkdir -p dist
+          find sdk/bin/packages -type f \( -name '*.apk' -o -name '*.ipk' \) -print0 |
+            xargs -0 -r cp -t dist/
+          test -n "$(find dist -maxdepth 1 -type f -name 'momo_*' -print -quit)"
+          tar -C dist -czf momo-immortalwrt-25.12.0-x86_64.tar.gz .
+
+      - name: Publish GitHub release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
-          files: |
-            momo_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
-
-      - name: upload
-        uses: actions/upload-artifact@v7
-        with:
-          name: feed_momo_${{ matrix.arch }}-${{ matrix.branch }}
-          path: feed_momo_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
-
-  feed:
-    needs: release
-    name: feed
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: download
-        uses: actions/download-artifact@v8
-        with:
-          pattern: feed_momo_*
-          merge-multiple: true
-      
-      - name: uncompress
-        run: |
-          for file in feed_momo_*.tar.gz; do tar -x -z -f "$file"; done
-      
-      - name: prepare
-        run: |
-          echo "${{ secrets.KEY_BUILD_PUB }}" > public/key-build.pub
-          echo "${{ secrets.PUBLIC_KEY }}" > public/public-key.pem
-          tree --dirsfirst --sort name -P '*.apk|*.ipk' --prune --noreport -H "" -T "Momo's Feed" --charset utf-8 -o public/index.html public
-          sed -i '/<p class="VERSION">/,/<\/p>/d' public/index.html
-
-      - name: feed
-        uses: cloudflare/wrangler-action@v3
-        with:
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy public --project-name=momomomo
+          files: momo-immortalwrt-25.12.0-x86_64.tar.gz
+          generate_release_notes: true
