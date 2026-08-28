@@ -75,9 +75,9 @@ jobs:
       - name: Package build output
         run: |
           mkdir -p dist
-          find sdk/bin/packages -type f \( -name '*.apk' -o -name '*.ipk' \) -print0 |
+          find sdk/bin/packages -type f -name 'momo-*.apk' -print0 |
             xargs -0 -r cp -t dist/
-          test -n "$(find dist -maxdepth 1 -type f -name 'momo[-_]*' -print -quit)"
+          test -n "$(find dist -maxdepth 1 -type f -name 'momo-*.apk' -print -quit)"
           tar -C dist -czf momo-immortalwrt-25.12.0-x86_64.tar.gz .
 
       - name: Publish GitHub release
