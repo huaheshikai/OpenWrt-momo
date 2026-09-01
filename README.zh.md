@@ -55,6 +55,8 @@ wget -O - https://github.com/nikkinikki-org/OpenWrt-momo/raw/refs/heads/main/uni
 
 查看 [Wiki](https://github.com/nikkinikki-org/OpenWrt-momo/wiki)
 
+开发、配置字段、运行流程、nftables/策略路由和排错说明请参阅[完整实现文档](IMPLEMENTATION.zh.md)。
+
 ## 如何工作
 
 1. 启动 sing-box。

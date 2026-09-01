@@ -55,6 +55,8 @@ wget -O - https://github.com/nikkinikki-org/OpenWrt-momo/raw/refs/heads/main/uni
 
 See [Wiki](https://github.com/nikkinikki-org/OpenWrt-momo/wiki)
 
+For architecture, configuration fields, runtime flow, nftables/policy routing, and troubleshooting, see the [implementation documentation](IMPLEMENTATION.zh.md).
+
 ## How does it work
  
 1. Run sing-box.
